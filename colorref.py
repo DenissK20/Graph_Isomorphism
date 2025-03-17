@@ -128,6 +128,7 @@ def get_refinement_of_graph(g: Graph, last_colour: int, is_first: bool) -> Tuple
   return new_colourings, last_colour
 
 # make a dictionary of new colours based on the first graph and adding new neighbourhoods
+#TODO: can be optimized? (complexity)
 def construct_dictionary_to_share_iteratively(g: Graph, iterative_dict: dict, last_colour) -> Tuple[dict, int]:
   # dictionary iteration started, getting new colourings from the first graph
   if iterative_dict == {}:
@@ -183,7 +184,6 @@ def is_graph_stable(g: Graph) -> bool:
       return False
   return True
 
-
 # has no edges
 def is_graph_empty(g: Graph) -> bool:
   full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary(g)
@@ -234,8 +234,8 @@ def find_equivalent_graphs(gs: List[Graph]) -> List[List[int]]:
       for j in range(i+1, len(gs)):
         if gs[j] not in used_graphs:
           # get dictionaries of graphs i and j
-          short_dictionary_i = short_dictionaries[i]
-          short_dictionary_j = short_dictionaries[j]
+          short_dictionary_i = short_dictionaries[i] # was used to check also neighbourhoods
+          short_dictionary_j = short_dictionaries[j] # was used to check also neighbourhoods
           vertex_dictionary_i = vertex_dict[i]
           vertex_dictionary_j = vertex_dict[j]
 
@@ -245,7 +245,7 @@ def find_equivalent_graphs(gs: List[Graph]) -> List[List[int]]:
               used_graphs.append(gs[j])
               graph_group.append(j)
 
-          # otherwise, graphs with identical neighbourhoods and same number of vertices for each colour
+          # otherwise, graphs with the same number of vertices for each colour
           elif are_equivalent(vertex_dictionary_i, vertex_dictionary_j) :
             used_graphs.append(gs[j])
             graph_group.append(j)
@@ -253,7 +253,7 @@ def find_equivalent_graphs(gs: List[Graph]) -> List[List[int]]:
   return equivalent_graphs
 
 # "main" function, checks for graphs stability, refines colouring, checks for graphs stability
-def graph_colorref(gs: List[Graph]) -> dict:
+def graph_colorref(gs: List[Graph], apply_degree_colouring: bool) -> dict:
   stable_graphs = []
   iterations_taken_by_graphs = {}
   iteration = 0
@@ -266,8 +266,9 @@ def graph_colorref(gs: List[Graph]) -> dict:
         stable_graphs.append(g)
 
   # apply degree colouring
-  for g in gs:
-    graph_degree_coloring(g)
+  if apply_degree_colouring:
+    for g in gs:
+      graph_degree_coloring(g)
 
   # start colour refinement
   iteration += 1
@@ -322,7 +323,7 @@ def construct_result(gs: List[Graph]) -> List[Tuple[List[int], List[int], int, b
   for i in range(len(gs)):
     graphs_i_dict.update({i: gs[i]})
 
-  iterations_taken_by_graphs = graph_colorref(gs)
+  iterations_taken_by_graphs = graph_colorref(gs, True)
   equivalent_groups = find_equivalent_graphs(gs)
 
   # for each group construct the result list
@@ -338,13 +339,13 @@ def basic_colorref(filename: str) -> List[Tuple[List[int], List[int], int, bool]
   return construct_result(load_samples(filename)[0])
 
 # construct the informative result after graphs colour refinement
-def info_construct_result(gs: List[Graph]):
+def info_construct_result(gs: List[Graph], apply_degree_colouring: bool):
   graphs_i_dict = {}
   lst = []
   for i in range(len(gs)):
     graphs_i_dict.update({i: gs[i]})
 
-  graph_colorref(gs)
+  graph_colorref(gs, apply_degree_colouring)
   equivalent_groups = find_equivalent_graphs(gs)
 
   for group in equivalent_groups:
@@ -358,8 +359,8 @@ def info_basic_colorref(filename: str):
   return info_construct_result(load_samples(filename)[0])
 
 # print for manual check
-start_time = time.time()
-res = basic_colorref("Benchmark/CrefBenchmark6.grl")
-end_time = time.time()
-print(res)
-print(end_time - start_time)
+#start_time = time.time()
+#res = basic_colorref("Benchmark/CrefBenchmark6.grl")
+#end_time = time.time()
+#print(res)
+#print(end_time - start_time)
