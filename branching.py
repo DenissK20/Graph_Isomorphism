@@ -37,6 +37,8 @@ def count_isomorphism(d: List[Vertex], i: List[Vertex], g1: Graph, g2: Graph):
         colour_class = colour
         break
 
+  if colour_class == 0:
+    return 0
   vertex_x = v1[colour_class][0]
   num_isomorphisms = 0
   for vertex_y in v2[colour_class]:
@@ -54,15 +56,39 @@ def branching(file):
   result_tuple = info_construct_result(graphs, True)
 
   for group_result in result_tuple:
+    print(group_result[0])
+    used_graphs = []
+
     if group_result[2]:
       tpl = (group_result[0], 1)
       lst.append(tpl)
     else:
-      g1 = graphs_i_dict.get(group_result[0][0])
-      g2 = copy.deepcopy(g1)
-      automorphisms = individualisation_refinement(g1, g2)
-      tpl = (group_result[0], automorphisms)
-      lst.append(tpl)
+      if len(group_result[0]) == 1:
+        g1 = graphs_i_dict.get(group_result[0][0])
+        g2 = copy.deepcopy(g1)
+        automorphisms = individualisation_refinement(g1, g2)
+        if automorphisms > 0:
+          tpl = (group_result[0], automorphisms)
+          lst.append(tpl)
+      else:
+
+        for i in range(len(group_result[0])):
+          if group_result[0][i] not in used_graphs:
+            auto_group = []
+            used_graphs.append(group_result[0][i])
+            auto_group.append(group_result[0][i])
+
+            for j in range(i+1, len(group_result[0])):
+              if group_result[0][j] not in used_graphs:
+                g1 = graphs_i_dict.get(group_result[0][i])
+                g2 = graphs_i_dict.get(group_result[0][j])
+
+                automorphisms = individualisation_refinement(g1, g2)
+                if automorphisms > 0:
+                  auto_group.append(group_result[0][j])
+                  used_graphs.append(group_result[0][j])
+                  tpl = (auto_group, automorphisms)
+                  lst.append(tpl)
 
   return lst
 
