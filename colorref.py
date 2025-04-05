@@ -68,6 +68,31 @@ def construct_graph_dictionary(g: Graph) -> Tuple[dict, dict, dict]:
           vertex_dictionary[vertex_colour].append(vertex)
   return full_dictionary, short_dictionary, vertex_dictionary
 
+# construct a dictionary of vertices (key) that changed colour and save their previous colour (value)
+def get_changed_vertices(prev_vertex_dict: dict, curr_vertex_dict: dict) -> dict:
+  changed_vertices = {}
+  for colour in prev_vertex_dict:
+    if colour not in curr_vertex_dict:
+      changed_vertices[colour] = []
+      changed_vertices[colour].extend(prev_vertex_dict[colour])
+    else:
+      changed = [v for v in prev_vertex_dict[colour] if v not in curr_vertex_dict[colour]]
+      changed_vertices[colour] = []
+      changed_vertices[colour].extend(changed)
+
+  return changed_vertices
+
+# recolour vertices to their previous colour
+def revert_vertex_colouring(changed_vertices: dict):
+  for colour in changed_vertices:
+    for vertex in changed_vertices[colour]:
+      vertex.set_colour(colour)
+
+
+def apply_reversion_of_vertices(prev_vertex_dict: dict, curr_vertex_dict: dict):
+  changed_vertices = get_changed_vertices(prev_vertex_dict, curr_vertex_dict)
+  revert_vertex_colouring(changed_vertices)
+
 # apply new colouring to a graph
 def refine_new_colourings(g: Graph, new_colourings) -> bool:
   f,s,v = construct_graph_dictionary(g)
@@ -355,12 +380,12 @@ def info_construct_result(gs: List[Graph], apply_degree_colouring: bool):
   return lst
 
 # call of the "main" function but with output being graph information after colour refinement
-def info_basic_colorref(filename: str):
-  return info_construct_result(load_samples(filename)[0])
+#def info_basic_colorref(filename: str):
+#  return info_construct_result(load_samples(filename)[0])
 
 # print for manual check
 #start_time = time.time()
-#res = basic_colorref("Benchmark/CrefBenchmark6.grl")
+#res = basic_colorref("SampleGraphSetBranching/cubes3.grl")
 #end_time = time.time()
 #print(res)
 #print(end_time - start_time)
