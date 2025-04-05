@@ -1,4 +1,3 @@
-import copy
 from colorref import *
 
 
@@ -12,13 +11,9 @@ def coarsest_colouring(d: List[int], i: List[int], g1: Graph, g2: Graph):
     print("ERROR: D and I are of different length")
     return
 
-
   last_colour = get_last_colour([g1, g2])
   g1.vertices[d[-1]].set_colour(last_colour + 1)
   g2.vertices[i[-1]].set_colour(last_colour + 1)
-  #d[-1].set_colour(last_colour + 1)
-  #i[-1].set_colour(last_colour + 1)
-  #last_colour += 1
 
   res_coarsest_colouring = info_construct_result([g1, g2], False) # colour refine
   return res_coarsest_colouring
@@ -31,8 +26,6 @@ def count_isomorphism(d: List[int], i: List[int], g1: Graph, g2: Graph):
       return 0
     if len(refined_coarsest_colouring) == 1 and refined_coarsest_colouring[0][2] == True: # bijection
       return 1
-  gg1 = copy.deepcopy(g1)
-  gg2 = copy.deepcopy(g2)
 
   f1, s1, v1 = construct_graph_dictionary(g1)
   f2, s2, v2 = construct_graph_dictionary(g2)
@@ -49,9 +42,24 @@ def count_isomorphism(d: List[int], i: List[int], g1: Graph, g2: Graph):
   num_isomorphisms = 0
   for vertex_y in v2[colour_class]:
     num_isomorphisms += count_isomorphism(d + [vertex_x.label], i + [vertex_y.label], g1, g2)
-    g1, g2 = copy.deepcopy(gg1), copy.deepcopy(gg2)
+    ff1, ss1, vv1 = construct_graph_dictionary(g1)
+    ff2, ss2, vv2 = construct_graph_dictionary(g2)
+    apply_reversion_of_vertices(v1, vv1)
+    apply_reversion_of_vertices(v2, vv2)
 
   return num_isomorphisms
+
+
+def construct_graph_copy(g: Graph) -> Graph:
+  n_vertices = len(g.vertices)
+  new_graph = Graph(False, n_vertices, True)
+  for edge in g.edges:
+    head = edge.head.label
+    tail = edge.tail.label
+    new_edge = Edge(new_graph.vertices[head], new_graph.vertices[tail])
+    new_graph.add_edge(new_edge)
+
+  return new_graph
 
 
 def branching(file):
@@ -63,7 +71,6 @@ def branching(file):
   result_tuple = info_construct_result(graphs, True)
 
   for group_result in result_tuple:
-    print(group_result[0])
     used_graphs = []
 
     if group_result[2]:
@@ -72,7 +79,7 @@ def branching(file):
     else:
       if len(group_result[0]) == 1: # only singular graph here
         g1 = graphs_i_dict.get(group_result[0][0])
-        g2 = copy.deepcopy(g1)
+        g2 = construct_graph_copy(g1)
         automorphisms = individualisation_refinement(g1, g2)
         if automorphisms > 0:
           tpl = (group_result[0], automorphisms)
@@ -82,26 +89,33 @@ def branching(file):
         for i in range(len(group_result[0])):
           if group_result[0][i] not in used_graphs:
             auto_group = []
+            n_a = 0
             used_graphs.append(group_result[0][i])
             auto_group.append(group_result[0][i])
 
             g1 = graphs_i_dict.get(group_result[0][i])
-            gg1 = copy.deepcopy(g1)
+            f1, s1, v1 = construct_graph_dictionary(g1)
             for j in range(i+1, len(group_result[0])):
               if group_result[0][j] not in used_graphs:
                 g2 = graphs_i_dict.get(group_result[0][j])
-                gg2 = copy.deepcopy(g2)
-                automorphisms = individualisation_refinement(gg1, gg2)
-                gg1 = copy.deepcopy(g1)
-                gg2 = copy.deepcopy(g2)
+                f2, s2, v2 = construct_graph_dictionary(g2)
+                automorphisms = individualisation_refinement(g1, g2)
+
+                ff1, ss1, vv1 = construct_graph_dictionary(g1)
+                ff2, ss2, vv2 = construct_graph_dictionary(g2)
+                apply_reversion_of_vertices(v1, vv1)
+                apply_reversion_of_vertices(v2, vv2)
+
                 if automorphisms > 0:
                   auto_group.append(group_result[0][j])
                   used_graphs.append(group_result[0][j])
-                  tpl = (auto_group, automorphisms)
-                  lst.append(tpl)
+                  if n_a == 0: n_a = automorphisms
+            tpl = (auto_group, n_a)
+            print(tpl)
+            lst.append(tpl)
 
   return lst
 
 
-res = branching("SampleGraphSetBranching/cubes3.grl")
+res = branching("SampleGraphSetBranching/modulesD.grl")
 print(res)
