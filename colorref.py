@@ -37,13 +37,12 @@ def construct_graph_dictionary(g: Graph) -> Tuple[dict, dict, dict]:
   vertex_dictionary = {}
   for vertex in g.vertices:
     if len(vertex.neighbours) == 0:
-      if 0 not in full_dictionary:
-        full_dictionary[0] = {}
-        short_dictionary[0] = []
-        vertex_dictionary[0] = []
-
-      vertex_dictionary[0].append(vertex)
-
+      colour = vertex.get_colour
+      if colour not in full_dictionary:
+        full_dictionary[colour] = {}
+        short_dictionary[colour] = []
+        vertex_dictionary[colour] = []
+      vertex_dictionary[colour].append(vertex)
       continue
 
     vertex_colour = vertex.get_colour # COLOUR IS INITIALISED WHEN CREATING A VERTEX, WHICH IS 0
@@ -115,6 +114,17 @@ def get_last_colour(gs: List[Graph]) -> int:
     if last_colouring < max(v.keys()):
       last_colouring = max(v.keys())
   return last_colouring
+
+
+def get_the_smallest_colour(gs: List[Graph]) -> int:
+  smallest = get_last_colour(gs)
+
+  for g in gs:
+    f,s,v = construct_graph_dictionary(g)
+    if smallest > min(v.keys()):
+      smallest = min(v.keys())
+  return smallest
+
 
 # find and save to dictionary possible neighbourhoods with new colour
 def get_refinement_of_graph(g: Graph, last_colour: int, is_first: bool) -> Tuple[dict, int]:
