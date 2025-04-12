@@ -1,3 +1,5 @@
+import random
+
 from colorref import *
 
 
@@ -8,8 +10,7 @@ def individualisation_refinement(g1: Graph, g2: Graph) -> int:
 
 def coarsest_colouring(d: List[int], i: List[int], g1: Graph, g2: Graph):
   if len(d) != len(i):
-    print("ERROR: D and I are of different length")
-    return
+    raise ValueError("ERROR: D and I are of different length")
 
   last_colour = get_last_colour([g1, g2])
   g1.vertices[d[-1]].set_colour(last_colour + 1)
@@ -29,17 +30,22 @@ def count_isomorphism(d: List[int], i: List[int], g1: Graph, g2: Graph):
 
   f1, s1, v1 = construct_graph_dictionary(g1)
   f2, s2, v2 = construct_graph_dictionary(g2)
-  colour_class = 0
+  colour_class = -1
+  max_class_size = 1 # choosing the colour class with the most vertices
+
   for colour in s1:
     if colour in s2:
-      if len(v1[colour]) > 1:
+      class_size = len(v1[colour])
+      if class_size > max_class_size:
+        max_class_size = class_size
         colour_class = colour
-        break
 
-  if colour_class == 0:
+  if colour_class == -1:
     return 0
-  vertex_x = v1[colour_class][0]
+
   num_isomorphisms = 0
+
+  vertex_x = v1[colour_class][0]
   for vertex_y in v2[colour_class]:
     num_isomorphisms += count_isomorphism(d + [vertex_x.label], i + [vertex_y.label], g1, g2)
     ff1, ss1, vv1 = construct_graph_dictionary(g1)
@@ -52,12 +58,15 @@ def count_isomorphism(d: List[int], i: List[int], g1: Graph, g2: Graph):
 
 def construct_graph_copy(g: Graph) -> Graph:
   n_vertices = len(g.vertices)
-  new_graph = Graph(False, n_vertices, True)
+  new_graph = Graph(False, n_vertices, False)
   for edge in g.edges:
     head = edge.head.label
     tail = edge.tail.label
     new_edge = Edge(new_graph.vertices[head], new_graph.vertices[tail])
     new_graph.add_edge(new_edge)
+
+  for i in range(n_vertices):
+    new_graph.vertices[i].set_colour(g.vertices[i].get_colour)
 
   return new_graph
 
@@ -66,6 +75,7 @@ def branching(file):
   lst = []
   graphs = load_samples(file)[0]
   graphs_i_dict = {}
+
   for i in range(len(graphs)):
     graphs_i_dict.update({i: graphs[i]})
   result_tuple = info_construct_result(graphs, True)
@@ -111,7 +121,7 @@ def branching(file):
                   used_graphs.append(group_result[0][j])
                   if n_a == 0: n_a = automorphisms
             tpl = (auto_group, n_a)
-            print(tpl)
+            #print(tpl)
             lst.append(tpl)
 
   return lst
