@@ -142,11 +142,10 @@ def get_refinement_of_graph(g: Graph, last_colour: int, is_first: bool) -> Tuple
 
           # secure that one combination of a colour will not be changed in colour
           if i < list_of_colours_length - 1:
-            if c not in new_colourings:
-              new_colourings[c] = []
-            new_colourings[c].append((tuple(neighbour_comb), last_colour + 1))
-            last_colour += 1
-            i += 1
+            if tuple((c, tuple(neighbour_comb))) not in new_colourings:
+              new_colourings[tuple((c, tuple(neighbour_comb)))] = last_colour + 1
+              last_colour += 1
+              i += 1
           else:
             break
   else:
@@ -157,14 +156,12 @@ def get_refinement_of_graph(g: Graph, last_colour: int, is_first: bool) -> Tuple
         if len(short_dictionary[c]) == 1:
           continue
 
-        if c not in new_colourings:
-          new_colourings[c] = []
-        new_colourings[c].append((tuple(neighbour_comb), last_colour + 1))
-        last_colour += 1
+        if tuple((c, tuple(neighbour_comb))) not in new_colourings:
+          new_colourings[tuple((c, tuple(neighbour_comb)))] = last_colour + 1
+          last_colour += 1
   return new_colourings, last_colour
 
 # make a dictionary of new colours based on the first graph and adding new neighbourhoods
-#TODO: can be optimized? (complexity)
 def construct_dictionary_to_share_iteratively(g: Graph, iterative_dict: dict, last_colour) -> Tuple[dict, int]:
   # dictionary iteration started, getting new colourings from the first graph
   if iterative_dict == {}:
@@ -174,37 +171,34 @@ def construct_dictionary_to_share_iteratively(g: Graph, iterative_dict: dict, la
     # continue dictionary iteration
     new_colouring, new_last_colour = get_refinement_of_graph(g, last_colour, False)
 
-    for colour in new_colouring:
+    for tpl in new_colouring:
       # found not recorded previous colour, adding new colour
-      if colour not in iterative_dict:
-        iterative_dict[colour] = []
-        iterative_dict[colour].extend(new_colouring[colour])
+      if tpl not in iterative_dict:
+        iterative_dict[tpl] = new_colouring[tpl]
       else:
         # such previous colour exists
-        for i in range(len(new_colouring[colour])):
-          found_this_neighbourhood = False
-          for j in range(len(iterative_dict[colour])):
-            if new_colouring[colour][i][0] == iterative_dict[colour][j][0]:
-              found_this_neighbourhood = True
+        found_this_neighbourhood = False
+        if tpl in iterative_dict:
+          found_this_neighbourhood = True
 
-          # new neighbourhood found, new colour for it recorded
-          if not found_this_neighbourhood:
-            iterative_dict[colour].append((new_colouring[colour][i]))
-            continue
+        # new neighbourhood found, new colour for it recorded
+        if not found_this_neighbourhood:
+          iterative_dict[tpl] = new_colouring[tpl]
+          continue
   return iterative_dict, new_last_colour
 
 # apply new colouring
 def apply_prepare_iterated_shared_new_colouring(g: Graph, iterative_dict: dict):
   full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary(g)
   new_colourings = {}
-  for colour in iterative_dict:
-    for i in range(len(iterative_dict[colour])):
-      neighbourhood = iterative_dict[colour][i][0]
-      if colour in short_dictionary:
-        if list(neighbourhood) in short_dictionary[colour]:
-          new_colour = iterative_dict[colour][i][1]
-          new_colourings[new_colour] = []
-          new_colourings[new_colour].extend(full_dictionary[colour][neighbourhood])
+  for tpl in iterative_dict:
+    colour = tpl[0]
+    neighbourhood = tpl[1]
+    if colour in short_dictionary:
+      if list(neighbourhood) in short_dictionary[colour]:
+        new_colour = iterative_dict[tpl]
+        new_colourings[new_colour] = []
+        new_colourings[new_colour].extend(full_dictionary[colour][neighbourhood])
   return new_colourings
 
 # check for each colour appearing as many times as there are vertices

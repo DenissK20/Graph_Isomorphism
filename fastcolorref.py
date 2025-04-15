@@ -1,93 +1,133 @@
-from graph import *
-from graph_io import *
+from colorref import *
 
-import time
+# body of the fast colour refinement algorithm
+def fast_color_refinement(graphs, initial_colouring: bool):
 
-from colorref import load_samples
+    if initial_colouring: # when graphs were not coloured yet
+        vertex_to_color = [{v: 0 for v in G.vertices} for G in graphs]
+    else: # vertices are assigned not uniform colouring
+        vertex_to_color = [{v: v.get_colour for v in G.vertices} for G in graphs]
 
+    # save all colour classes and vertices with their respective colour class to a separate dictionary
+    color_classes = {}
+    color_classes[0] = []
+    for i, G in enumerate(graphs):
+        for v in G.vertices:
+            if v.get_colour not in color_classes:
+                color_classes[v.get_colour] = []
+            color_classes[v.get_colour].append((i, v))
 
-# load graphs from the file
-def load_samples(filename: str) -> Union[Tuple[List[Graph], List[str]], Graph]:
-    with open(filename) as graph_file:
-        return load_graph(graph_file, Graph, True)
+    # initialise the queue based on the colouring of the graph
+    if initial_colouring:
+        queue = [0]
+        next_color = 1 # max color + 1
+    else:
+        max_group = max(color_classes, key=lambda k: len(color_classes[k]))
+        queue = []
+        for c in color_classes.keys():
+            if color_classes[c] != max_group:
+                queue.append(c)
+        next_color = get_last_colour(graphs) # last colour or last colour +1
 
-
-def fast_color_refinement(G):
     iter_count = 0
 
-    vertice_set = set()
-    vertex_to_color = {}
-    for g in G.vertices:
-        vertice_set.add(g)
-        vertex_to_color[g] = 1
-    color_class = {1: vertice_set}
-
-    queue = [1]
     while queue:
         C = queue.pop(0)
-        new_colors = refine_with_color_classes(C, vertex_to_color, color_class)
-        if len(new_colors) != 0 :
-            iter_count += 1
-            update_queue(C,new_colors,queue,color_class)
+        iter_count += 1
 
+        # compute neighbourhood signatures for vertices in colour C
+        signature_to_vertices = {}  # signature -> list of (id, vertex)
+        affected_colors = set()
+        for i, v in color_classes[C]:
+            # create signature: sorted tuple of (color, count) for neighbours
+            neighbor_counts = {}
+            for n in v.neighbours:
+                neighbor_color = vertex_to_color[i][n]
+                neighbor_counts[neighbor_color] = neighbor_counts.get(neighbor_color, 0) + 1
+                affected_colors.add(neighbor_color)
 
-    return vertex_to_color, iter_count
+            signature = tuple(sorted((color, count) for color, count in neighbor_counts.items()))
+            if signature not in signature_to_vertices:
+                signature_to_vertices[signature] = []
+            signature_to_vertices[signature].append((i, v))
 
+        # if multiple signatures, split color C
+        if len(signature_to_vertices) > 1:
+            del color_classes[C]
+            # Select the largest group to preserve the original color
+            signatures = sorted(signature_to_vertices.items(), key=lambda x: len(x[1]), reverse=True)
 
-def refine_with_color_classes(C, vertex_to_color, color_class):
-    neighbor_count = {}
-    for g in color_class[C]:  #TODO: Check mechanism might be performance bottleneck
-        for n in g.neighbours:
-            if n in neighbor_count:
-                neighbor_count[n] = neighbor_count[n] + 1
-            else:
-                neighbor_count[n] = 1
+            for i, (signature, vertices) in enumerate(signatures):
+                new_color = C if i == 0 else next_color
+                if i > 0:
+                    next_color += 1
+                color_classes[new_color] = vertices
 
-    #new color classes that result from splitting
-    new_color_classes = set()
-    new_assignments = {}
+                for i, v in vertices:
+                    vertex_to_color[i][v] = new_color
 
-    for color, vertices in list(color_class.items()):
-        # dictionary to group vertices by their count in C.
-        groups = {}
-        for u in vertices:
-            # Use count from neighbor_count if it exists, else treat as 0.
-            count = neighbor_count.get(u, 0)
-            if count not in groups:
-                groups[count] = set()
-            groups[count].add(u)
+                # queue the new color (or re-queue C if it was preserve)
+                if new_color not in queue:
+                    queue.append(new_color)
 
-        if len(groups) > 1:
-            # 4emove the original color class from the partition.
-            color_class.pop(color)
-            key_of_max = max(groups, key=lambda k: len(groups[k]))  # max key - largest group TODO: Might be false logic to preserve c
-            #  assign a new color label.
-            for count_value, group in groups.items():
-                if count_value != key_of_max:
-                    new_color = len(color_class) + 1
-                    new_color_classes.add(new_color)
-                else:
-                    new_color = color
+            # queue affected neighbor colors
+            for neighbor_color in affected_colors:
+                if neighbor_color in color_classes and neighbor_color not in queue:
+                    queue.append(neighbor_color)
 
-                color_class[new_color] = group
-                for u in group:
-                    new_assignments[u] = new_color
+    # construct the result of each graph
+    graph_results = []
+    for i, G in enumerate(graphs):
+        color_counts = {}
+        for v in G.vertices:
+            color = vertex_to_color[i][v]
+            v.set_colour(color) # apply designated colour to all vertices
+            color_counts[color] = color_counts.get(color, 0) + 1
 
-        # update vertex_to_color
-        for u, new_color in new_assignments.items():
-            vertex_to_color[u] = new_color
+        occurrences = sorted(color_counts.values())
+        is_discrete = len(color_counts) == len(G.vertices)
+        graph_results.append((occurrences, iter_count, is_discrete))
 
-        # TODO: Add extra return
-    return new_color_classes  
+    # group graphs based on their equivalence
+    equivalent_groups = find_equivalent_graphs(graphs, vertex_to_color)
 
+    # prepare result
+    result = []
+    for group in equivalent_groups:
+        first_graph_idx = group[0]
+        occurrences, iterations, discrete = graph_results[first_graph_idx]
+        result.append((group, occurrences, discrete, iterations))
 
+    return sorted(result, key=lambda x: x[0])
 
-def update_queue(C, new_colors, queue, color_class):
-    if C in queue:
-        for c in new_colors:
-            queue.append(c)
-    else:
-        key_of_largest = max(new_colors, key=lambda k: len(color_class[k]))
-        new_colors.remove(key_of_largest)
-        for c in new_colors:
-            queue.append(c)
+# construct equivalence classes
+def find_equivalent_graphs(graphs, vertex_to_color):
+    signature_to_group = {}  # signature -> list of graph indices
+
+    for i, G in enumerate(graphs):
+        # normalize colour classes
+        color_count = {}
+        for v in G.vertices:
+            color = vertex_to_color[i][v]
+            color_count[color] = color_count.get(color, 0) + 1
+
+        # sort by colour label to keep consistent, then sizes
+        normalized_signature = tuple(sorted(color_count.items(), key=lambda x: (x[1], x[0])))
+
+        if normalized_signature not in signature_to_group:
+            signature_to_group[normalized_signature] = []
+        signature_to_group[normalized_signature].append(i)
+
+    return list(signature_to_group.values())
+
+print("started")
+start_time = time.time()
+gs = load_samples("SampleGraphsBasicColorRefinement/colorref_largeexample_6_960.grl")[0]
+res = fast_color_refinement(gs, True)
+end_time = time.time()
+print("\nFinal Result:")
+print(res)
+f,s,v = construct_graph_dictionary(gs[0])
+print(f)
+print(res[0][2])
+print("Execution time:", end_time - start_time)
