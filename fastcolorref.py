@@ -119,15 +119,3 @@ def find_equivalent_graphs(graphs, vertex_to_color):
         signature_to_group[normalized_signature].append(i)
 
     return list(signature_to_group.values())
-
-print("started")
-start_time = time.time()
-gs = load_samples("SampleGraphsBasicColorRefinement/colorref_largeexample_6_960.grl")[0]
-res = fast_color_refinement(gs, True)
-end_time = time.time()
-print("\nFinal Result:")
-print(res)
-f,s,v = construct_graph_dictionary(gs[0])
-print(f)
-print(res[0][2])
-print("Execution time:", end_time - start_time)
