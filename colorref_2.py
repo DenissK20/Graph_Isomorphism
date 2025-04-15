@@ -4,12 +4,12 @@ from graph import *
 from graph_io import *
 
 # load graphs from the file
-def load_samples(filename: str) -> Union[Tuple[List[Graph], List[str]], Graph]:
+def load_samples_2(filename: str) -> Union[Tuple[List[Graph], List[str]], Graph]:
   with open(filename) as graph_file:
     return load_graph(graph_file, Graph, True)
 
 # apply degree colouring to the graph
-def graph_degree_coloring(g: Graph) -> int:
+def graph_degree_coloring_2(g: Graph) -> int:
   last_colouring = 0
   for i in range(len(g.vertices)):
     if len(g.vertices[i].neighbours) == 0:
@@ -20,7 +20,7 @@ def graph_degree_coloring(g: Graph) -> int:
   return last_colouring
 
 # get the neighbourhood of a certain vertex (gets colours of neighbours)
-def get_vertex_neighbourhood_colouring(v: Vertex) -> List[int]:
+def get_vertex_neighbourhood_colouring_2(v: Vertex) -> List[int]:
   list_of_colours = []
   for n in v.neighbours:
     list_of_colours.append(n.get_colour)
@@ -31,7 +31,7 @@ def get_vertex_neighbourhood_colouring(v: Vertex) -> List[int]:
 # short: key is a colour and value is a lists of neighbourhoods colourings
 # vertex: key is a colour and value is a list of vertices that have such colour
 # example of short dictionary: {1: [[1,2],[2,3]]}
-def construct_graph_dictionary(g: Graph) -> Tuple[dict, dict, dict]:
+def construct_graph_dictionary_2(g: Graph) -> Tuple[dict, dict, dict]:
   full_dictionary = {}
   short_dictionary = {}
   vertex_dictionary = {}
@@ -46,7 +46,7 @@ def construct_graph_dictionary(g: Graph) -> Tuple[dict, dict, dict]:
       continue
 
     vertex_colour = vertex.get_colour # COLOUR IS INITIALISED WHEN CREATING A VERTEX, WHICH IS 0
-    neighbourhood_colouring = get_vertex_neighbourhood_colouring(vertex) # the vertex provided is the same as the one received
+    neighbourhood_colouring = get_vertex_neighbourhood_colouring_2(vertex) # the vertex provided is the same as the one received
     # new colour found
     if vertex_colour not in full_dictionary:
       full_dictionary[vertex_colour] = {}
@@ -57,11 +57,10 @@ def construct_graph_dictionary(g: Graph) -> Tuple[dict, dict, dict]:
 
       vertex_dictionary[vertex_colour] = []
       vertex_dictionary[vertex_colour].append(vertex)
-    else: # colour exists
+    else:
       if tuple(neighbourhood_colouring) not in full_dictionary[vertex_colour]:
         full_dictionary[vertex_colour].update({tuple(neighbourhood_colouring): [vertex]})
         short_dictionary[vertex_colour].append(neighbourhood_colouring)
-        vertex_dictionary[vertex_colour].append(vertex)
       else:
         if vertex not in full_dictionary[vertex_colour][tuple(neighbourhood_colouring)]: # is this if needed?
           full_dictionary[vertex_colour][tuple(neighbourhood_colouring)].append(vertex)
@@ -69,7 +68,7 @@ def construct_graph_dictionary(g: Graph) -> Tuple[dict, dict, dict]:
   return full_dictionary, short_dictionary, vertex_dictionary
 
 # construct a dictionary of vertices (key) that changed colour and save their previous colour (value)
-def get_changed_vertices(prev_vertex_dict: dict, curr_vertex_dict: dict) -> dict:
+def get_changed_vertices_2(prev_vertex_dict: dict, curr_vertex_dict: dict) -> dict:
   changed_vertices = {}
   for colour in prev_vertex_dict:
     if colour not in curr_vertex_dict:
@@ -83,19 +82,19 @@ def get_changed_vertices(prev_vertex_dict: dict, curr_vertex_dict: dict) -> dict
   return changed_vertices
 
 # recolour vertices to their previous colour
-def revert_vertex_colouring(changed_vertices: dict):
+def revert_vertex_colouring_2(changed_vertices: dict):
   for colour in changed_vertices:
     for vertex in changed_vertices[colour]:
       vertex.set_colour(colour)
 
 
-def apply_reversion_of_vertices(prev_vertex_dict: dict, curr_vertex_dict: dict):
-  changed_vertices = get_changed_vertices(prev_vertex_dict, curr_vertex_dict)
-  revert_vertex_colouring(changed_vertices)
+def apply_reversion_of_vertices_2(prev_vertex_dict: dict, curr_vertex_dict: dict):
+  changed_vertices = get_changed_vertices_2(prev_vertex_dict, curr_vertex_dict)
+  revert_vertex_colouring_2(changed_vertices)
 
 # apply new colouring to a graph
-def refine_new_colourings(g: Graph, new_colourings) -> bool:
-  f,s,v = construct_graph_dictionary(g)
+def refine_new_colourings_2(g: Graph, new_colourings) -> bool:
+  f,s,v = construct_graph_dictionary_2(g)
   l_before = len(s.keys())
 
   for new_colour in new_colourings:
@@ -103,33 +102,33 @@ def refine_new_colourings(g: Graph, new_colourings) -> bool:
       if v in new_colourings[new_colour]:
         v.set_colour(new_colour)
 
-  f2, s2, v2 = construct_graph_dictionary(g)
+  f2, s2, v2 = construct_graph_dictionary_2(g)
   l_after = len(s2.keys())
   return l_before != l_after
 
 # gets the biggest colour assigned in any graph
-def get_last_colour(gs: List[Graph]) -> int:
+def get_last_colour_2(gs: List[Graph]) -> int:
   last_colouring = 0
   for g in gs:
-    f,s,v = construct_graph_dictionary(g)
+    f,s,v = construct_graph_dictionary_2(g)
     if last_colouring < max(v.keys()):
       last_colouring = max(v.keys())
   return last_colouring
 
 
-def get_the_smallest_colour(gs: List[Graph]) -> int:
-  smallest = get_last_colour(gs)
+def get_the_smallest_colour_2(gs: List[Graph]) -> int:
+  smallest = get_last_colour_2(gs)
 
   for g in gs:
-    f,s,v = construct_graph_dictionary(g)
+    f,s,v = construct_graph_dictionary_2(g)
     if smallest > min(v.keys()):
       smallest = min(v.keys())
   return smallest
 
 
 # find and save to dictionary possible neighbourhoods with new colour
-def get_refinement_of_graph(g: Graph, last_colour: int, is_first: bool) -> Tuple[dict, int]:
-  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary(g)
+def get_refinement_of_graph_2(g: Graph, last_colour: int, is_first: bool) -> Tuple[dict, int]:
+  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary_2(g)
   new_colourings = {}
   if is_first: # the lazy way of differentiating the first and other graphs
     for c in short_dictionary:
@@ -142,11 +141,10 @@ def get_refinement_of_graph(g: Graph, last_colour: int, is_first: bool) -> Tuple
 
           # secure that one combination of a colour will not be changed in colour
           if i < list_of_colours_length - 1:
-            if c not in new_colourings:
-              new_colourings[c] = []
-            new_colourings[c].append((tuple(neighbour_comb), last_colour + 1))
-            last_colour += 1
-            i += 1
+            if tuple((c, tuple(neighbour_comb))) not in new_colourings:
+              new_colourings[tuple((c, tuple(neighbour_comb)))] = last_colour + 1
+              last_colour += 1
+              i += 1
           else:
             break
   else:
@@ -157,76 +155,72 @@ def get_refinement_of_graph(g: Graph, last_colour: int, is_first: bool) -> Tuple
         if len(short_dictionary[c]) == 1:
           continue
 
-        if c not in new_colourings:
-          new_colourings[c] = []
-        new_colourings[c].append((tuple(neighbour_comb), last_colour + 1))
-        last_colour += 1
+        if tuple((c, tuple(neighbour_comb))) not in new_colourings:
+          new_colourings[tuple((c, tuple(neighbour_comb)))] = last_colour + 1
+          last_colour += 1
   return new_colourings, last_colour
 
 # make a dictionary of new colours based on the first graph and adding new neighbourhoods
-#TODO: can be optimized? (complexity)
-def construct_dictionary_to_share_iteratively(g: Graph, iterative_dict: dict, last_colour) -> Tuple[dict, int]:
+#TODO: is optimized? (complexity)
+def construct_dictionary_to_share_iteratively_2(g: Graph, iterative_dict: dict, last_colour) -> Tuple[dict, int]:
   # dictionary iteration started, getting new colourings from the first graph
   if iterative_dict == {}:
-    new_colouring, new_last_colour = get_refinement_of_graph(g, last_colour, True)
+    new_colouring, new_last_colour = get_refinement_of_graph_2(g, last_colour, True)
     iterative_dict = new_colouring
   else:
     # continue dictionary iteration
-    new_colouring, new_last_colour = get_refinement_of_graph(g, last_colour, False)
+    new_colouring, new_last_colour = get_refinement_of_graph_2(g, last_colour, False)
 
-    for colour in new_colouring:
+    for tpl in new_colouring:
       # found not recorded previous colour, adding new colour
-      if colour not in iterative_dict:
-        iterative_dict[colour] = []
-        iterative_dict[colour].extend(new_colouring[colour])
+      if tpl not in iterative_dict:
+        iterative_dict[tpl] = new_colouring[tpl]
       else:
         # such previous colour exists
-        for i in range(len(new_colouring[colour])):
-          found_this_neighbourhood = False
-          for j in range(len(iterative_dict[colour])):
-            if new_colouring[colour][i][0] == iterative_dict[colour][j][0]:
-              found_this_neighbourhood = True
+        found_this_neighbourhood = False
+        if tpl in iterative_dict:
+          found_this_neighbourhood = True
 
-          # new neighbourhood found, new colour for it recorded
-          if not found_this_neighbourhood:
-            iterative_dict[colour].append((new_colouring[colour][i]))
-            continue
+        # new neighbourhood found, new colour for it recorded
+        if not found_this_neighbourhood:
+          iterative_dict[tpl] = new_colouring[tpl]
+          continue
   return iterative_dict, new_last_colour
 
 # apply new colouring
-def apply_prepare_iterated_shared_new_colouring(g: Graph, iterative_dict: dict):
-  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary(g)
+def apply_prepare_iterated_shared_new_colouring_2(g: Graph, iterative_dict: dict):
+  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary_2(g)
   new_colourings = {}
-  for colour in iterative_dict:
-    for i in range(len(iterative_dict[colour])):
-      neighbourhood = iterative_dict[colour][i][0]
-      if colour in short_dictionary:
-        if list(neighbourhood) in short_dictionary[colour]:
-          new_colour = iterative_dict[colour][i][1]
-          new_colourings[new_colour] = []
-          new_colourings[new_colour].extend(full_dictionary[colour][neighbourhood])
+  for tpl in iterative_dict:
+    colour = tpl[0]
+    neighbourhood = tpl[1]
+    if colour in short_dictionary:
+      if list(neighbourhood) in short_dictionary[colour]:
+        new_colour = iterative_dict[tpl]
+        new_colourings[new_colour] = []
+        new_colourings[new_colour].extend(full_dictionary[colour][neighbourhood])
   return new_colourings
 
 # check for each colour appearing as many times as there are vertices
-def is_graph_discrete(g: Graph) -> bool:
-  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary(g)
+def is_graph_discrete_2(g: Graph) -> bool:
+  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary_2(g)
   return len(short_dictionary.keys()) == len(g.vertices)
 
 # graph is stable if for each colour there is only one neighbourhood colour combination
-def is_graph_stable(g: Graph) -> bool:
-  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary(g)
+def is_graph_stable_2(g: Graph) -> bool:
+  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary_2(g)
   for colour in short_dictionary.keys():
     if len(short_dictionary[colour]) > 1:
       return False
   return True
 
 # has no edges
-def is_graph_empty(g: Graph) -> bool:
-  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary(g)
+def is_graph_empty_2(g: Graph) -> bool:
+  full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary_2(g)
   return full_dictionary == {}
 
 # check equivalence of two graphs
-def are_equivalent(v1: dict, v2: dict) -> bool:
+def are_equivalent_2(v1: dict, v2: dict) -> bool:
   l1 = len(v1)
   l2 = len(v2)
   i = 0 # should be l1 by the end
@@ -247,12 +241,12 @@ def are_equivalent(v1: dict, v2: dict) -> bool:
   return i == l1
 
 # construct equivalence classes
-def find_equivalent_graphs(gs: List[Graph]) -> List[List[int]]:
+def find_equivalent_graphs_2(gs: List[Graph]) -> List[List[int]]:
   # save dictionaries of each graph
   short_dictionaries = []
   vertex_dict = []
   for g in gs:
-    full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary(g)
+    full_dictionary, short_dictionary, vertex_dictionary = construct_graph_dictionary_2(g)
     short_dictionaries.append(short_dictionary)
     vertex_dict.append(vertex_dictionary)
 
@@ -276,27 +270,27 @@ def find_equivalent_graphs(gs: List[Graph]) -> List[List[int]]:
           vertex_dictionary_j = vertex_dict[j]
 
           # graphs that have no edges with the same number of vertices are equivalent
-          if is_graph_empty(gs[i]) and is_graph_empty(gs[j]):
+          if is_graph_empty_2(gs[i]) and is_graph_empty_2(gs[j]):
             if len(gs[i].vertices) == len(gs[j].vertices):
               used_graphs.append(gs[j])
               graph_group.append(j)
 
           # otherwise, graphs with the same number of vertices for each colour
-          elif are_equivalent(vertex_dictionary_i, vertex_dictionary_j) :
+          elif are_equivalent_2(vertex_dictionary_i, vertex_dictionary_j) :
             used_graphs.append(gs[j])
             graph_group.append(j)
       equivalent_graphs.append(graph_group)
   return equivalent_graphs
 
 # "main" function, checks for graphs stability, refines colouring, checks for graphs stability
-def graph_colorref(gs: List[Graph], apply_degree_colouring: bool) -> dict:
+def graph_colorref_2(gs: List[Graph], apply_degree_colouring: bool) -> dict:
   stable_graphs = []
   iterations_taken_by_graphs = {}
   iteration = 0
 
   # check if graphs are stable from the start
   for i, g in enumerate(gs):
-    if is_graph_stable(g):
+    if is_graph_stable_2(g):
       if g not in stable_graphs:
         iterations_taken_by_graphs.update({g: iteration})
         stable_graphs.append(g)
@@ -304,7 +298,7 @@ def graph_colorref(gs: List[Graph], apply_degree_colouring: bool) -> dict:
   # apply degree colouring
   if apply_degree_colouring:
     for g in gs:
-      graph_degree_coloring(g)
+      graph_degree_coloring_2(g)
 
   # start colour refinement
   iteration += 1
@@ -312,7 +306,7 @@ def graph_colorref(gs: List[Graph], apply_degree_colouring: bool) -> dict:
 
     # check if stable after degree colouring or after iteration
     for i, g in enumerate(gs):
-      if is_graph_stable(g):
+      if is_graph_stable_2(g):
         if g not in stable_graphs:
           iterations_taken_by_graphs.update({g: iteration})
           stable_graphs.append(g)
@@ -325,11 +319,11 @@ def graph_colorref(gs: List[Graph], apply_degree_colouring: bool) -> dict:
     # first get all possible new colours from the first graph, then add neighbourhoods that were not in dictionary
     iteration += 1
     iterative_dict = {}
-    last_colour = get_last_colour(gs)
+    last_colour = get_last_colour_2(gs)
     for i in range(len(gs)):
       if i in stable_graphs: # gs[i] not i
         continue
-      new_iterative_dict, new_last_colour = construct_dictionary_to_share_iteratively(gs[i], iterative_dict, last_colour)
+      new_iterative_dict, new_last_colour = construct_dictionary_to_share_iteratively_2(gs[i], iterative_dict, last_colour)
       iterative_dict = new_iterative_dict.copy()
       last_colour = new_last_colour
 
@@ -337,56 +331,56 @@ def graph_colorref(gs: List[Graph], apply_degree_colouring: bool) -> dict:
     for i in range(len(gs)):
       if i in stable_graphs:
         continue
-      new_colourings = apply_prepare_iterated_shared_new_colouring(gs[i], iterative_dict)
-      refine_new_colourings(gs[i], new_colourings)
+      new_colourings = apply_prepare_iterated_shared_new_colouring_2(gs[i], iterative_dict)
+      refine_new_colourings_2(gs[i], new_colourings)
 
   return iterations_taken_by_graphs
 
 # make a list of colour occurrences (as provided in the canvas example)
-def construct_occurrences_of_colours(g: Graph) -> List[int]:
+def construct_occurrences_of_colours_2(g: Graph) -> List[int]:
   occurrence_list = []
-  fd, sd, vd = construct_graph_dictionary(g)
+  fd, sd, vd = construct_graph_dictionary_2(g)
   for colour in vd:
     l = len(vd[colour])
     occurrence_list.append(l)
   return sorted(occurrence_list)
 
 # construct the results list for all graphs
-def construct_result(gs: List[Graph]) -> List[Tuple[List[int], List[int], int, bool]]:
+def construct_result_2(gs: List[Graph]) -> List[Tuple[List[int], List[int], int, bool]]:
   # save dictionaries of graphs
   graphs_i_dict = {}
   lst = []
   for i in range(len(gs)):
     graphs_i_dict.update({i: gs[i]})
 
-  iterations_taken_by_graphs = graph_colorref(gs, True)
-  equivalent_groups = find_equivalent_graphs(gs)
+  iterations_taken_by_graphs = graph_colorref_2(gs, True)
+  equivalent_groups = find_equivalent_graphs_2(gs)
 
   # for each group construct the result list
   for group in equivalent_groups:
     iteration = iterations_taken_by_graphs.get(graphs_i_dict.get(group[0]))
-    occurrences = construct_occurrences_of_colours(graphs_i_dict.get(group[0]))
-    tpl = (group, occurrences, iteration, is_graph_discrete(graphs_i_dict.get(group[0])))
+    occurrences = construct_occurrences_of_colours_2(graphs_i_dict.get(group[0]))
+    tpl = (group, occurrences, iteration, is_graph_discrete_2(graphs_i_dict.get(group[0])))
     lst.append(tpl)
   return lst
 
 # call of the "main" function
-def basic_colorref(filename: str) -> List[Tuple[List[int], List[int], int, bool]]:
-  return construct_result(load_samples(filename)[0])
+def basic_colorref_2(filename: str) -> List[Tuple[List[int], List[int], int, bool]]:
+  return construct_result_2(load_samples_2(filename)[0])
 
 # construct the informative result after graphs colour refinement
-def info_construct_result(gs: List[Graph], apply_degree_colouring: bool):
+def info_construct_result_2(gs: List[Graph], apply_degree_colouring: bool):
   graphs_i_dict = {}
   lst = []
   for i in range(len(gs)):
     graphs_i_dict.update({i: gs[i]})
 
-  graph_colorref(gs, apply_degree_colouring)
-  equivalent_groups = find_equivalent_graphs(gs)
+  graph_colorref_2(gs, apply_degree_colouring)
+  equivalent_groups = find_equivalent_graphs_2(gs)
 
   for group in equivalent_groups:
-    f, s, v = construct_graph_dictionary(graphs_i_dict.get(group[0]))
-    tpl = (group, (f, s, v), is_graph_discrete(graphs_i_dict.get(group[0])))
+    f, s, v = construct_graph_dictionary_2(graphs_i_dict.get(group[0]))
+    tpl = (group, (f, s, v), is_graph_discrete_2(graphs_i_dict.get(group[0])))
     lst.append(tpl)
   return lst
 
@@ -396,7 +390,7 @@ def info_construct_result(gs: List[Graph], apply_degree_colouring: bool):
 
 # print for manual check
 #start_time = time.time()
-#res = basic_colorref("CrefBenchmark6.grl")
+#res = basic_colorref_2("CrefBenchmark6.grl")
 #end_time = time.time()
 #print(res)
 #print(end_time - start_time)

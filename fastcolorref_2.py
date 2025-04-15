@@ -1,17 +1,32 @@
 from graph import *
 from graph_io import *
 import time
+from colorref import *
 
 
-def fast_color_refinement(graphs):
-    vertex_to_color = [{v: 1 for v in G.vertices} for G in graphs]
+def fast_color_refinement(graphs, initial_colouring: bool):
+    if initial_colouring:
+        vertex_to_color = [{v: 0 for v in G.vertices} for G in graphs]
+    else:
+        vertex_to_color = [{v: v.get_colour for v in G.vertices} for G in graphs]
     color_classes = {}
-    color_classes[1] = []
+    color_classes[0] = []
     for i, G in enumerate(graphs):
         for v in G.vertices:
-            color_classes[1].append((i, v))
-    queue = [1]
-    next_color = 2
+            if v.get_colour not in color_classes:
+                color_classes[v.get_colour] = []
+            color_classes[v.get_colour].append((i, v))
+
+    if initial_colouring:
+        queue = [0]
+        next_color = 1 ## max color + 1
+    else:
+        max_group = max(color_classes, key=lambda k: len(color_classes[k]))
+        queue = []
+        for c in color_classes.keys():
+            if color_classes[c] != max_group:
+                queue.append(c)
+        next_color = get_last_colour(graphs) ## THIS IS LAST COLOR or Last color +1
     iter_count = 0
 
     while queue:
@@ -52,24 +67,25 @@ def fast_color_refinement(graphs):
             for neighbor_color in affected_colors:
                 if neighbor_color in color_classes and neighbor_color not in queue:
                     queue.append(neighbor_color)
-
     graph_results = []
     for i, G in enumerate(graphs):
         color_counts = {}
         for v in G.vertices:
             color = vertex_to_color[i][v]
+            v.set_colour(color)
             color_counts[color] = color_counts.get(color, 0) + 1
         occurrences = sorted(color_counts.values())
         is_discrete = len(color_counts) == len(G.vertices)
         graph_results.append((occurrences, iter_count, is_discrete))
 
     equivalent_groups = find_equivalent_graphs(graphs, vertex_to_color)
+    #print(equivalent_groups)
 
     result = []
     for group in equivalent_groups:
         first_graph_idx = group[0]
         occurrences, iterations, discrete = graph_results[first_graph_idx]
-        result.append((group, occurrences, iterations, discrete))
+        result.append((group, occurrences, discrete, iterations))
 
     return sorted(result, key=lambda x: x[0])
 
@@ -94,12 +110,14 @@ def find_equivalent_graphs(graphs, vertex_to_color):
     return list(signature_to_group.values())
 
 
-if __name__ == '__main__':
-    start_time = time.time()
-    with open("/Users/taylan/PycharmProjects/Graph_Isomorphism/SampleGraphsFastColorRefinement (1)/threepaths5120.gr") as f:
-        graphs = load_graph(f, Graph, True)[0]
-    res = fast_color_refinement(graphs)
-    end_time = time.time()
-    print("\nFinal Result:")
-    print(res)
-    print("Execution time:", end_time - start_time)
+#print("started")
+#start_time = time.time()
+#gs = load_samples("SampleGraphsBasicColorRefinement/cref9vert3comp_10_27.grl")[0]
+#res = fast_color_refinement(gs, True)
+#end_time = time.time()
+#print("\nFinal Result:")
+#print(res)
+#f,s,v = construct_graph_dictionary(gs[0])
+#print(f)
+#print(res[0][2])
+#print("Execution time:", end_time - start_time)

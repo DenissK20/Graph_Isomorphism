@@ -1,14 +1,16 @@
-import random
+from os.path import ismount
 
+from fastcolorref_2 import *
 from colorref import *
+from colorref_2 import *
 
 
-def individualisation_refinement(g1: Graph, g2: Graph) -> int:
+def individualisation_refinement(g1: Graph, g2: Graph, use_fast_colour_refinement: bool, is_graph_isomorphism_problem: bool, isom_group: List) -> int:
   d, i = [], []
-  return count_isomorphism(d, i, g1, g2)
+  return count_isomorphism(d, i, g1, g2, use_fast_colour_refinement, is_graph_isomorphism_problem, isom_group)
 
 
-def coarsest_colouring(d: List[int], i: List[int], g1: Graph, g2: Graph):
+def coarsest_colouring(d: List[int], i: List[int], g1: Graph, g2: Graph, use_fast_colour_refinement: bool):
   if len(d) != len(i):
     raise ValueError("ERROR: D and I are of different length")
 
@@ -16,13 +18,16 @@ def coarsest_colouring(d: List[int], i: List[int], g1: Graph, g2: Graph):
   g1.vertices[d[-1]].set_colour(last_colour + 1)
   g2.vertices[i[-1]].set_colour(last_colour + 1)
 
-  res_coarsest_colouring = info_construct_result([g1, g2], False) # colour refine
+  if use_fast_colour_refinement:
+    res_coarsest_colouring = fast_color_refinement([g1, g2], False)
+  else:
+    res_coarsest_colouring = info_construct_result_2([g1, g2], False) # colour refine
   return res_coarsest_colouring
 
 
-def count_isomorphism(d: List[int], i: List[int], g1: Graph, g2: Graph):
+def count_isomorphism(d: List[int], i: List[int], g1: Graph, g2: Graph, use_fast_colour_refinement: bool, is_graph_isomorphism_problem: bool, isom_group: List) -> int:
   if len(d) > 0 and len(i) > 0:
-    refined_coarsest_colouring = coarsest_colouring(d, i, g1, g2)
+    refined_coarsest_colouring = coarsest_colouring(d, i, g1, g2, use_fast_colour_refinement)
     if len(refined_coarsest_colouring) > 1: # unbalanced
       return 0
     if len(refined_coarsest_colouring) == 1 and refined_coarsest_colouring[0][2] == True: # bijection
@@ -47,7 +52,12 @@ def count_isomorphism(d: List[int], i: List[int], g1: Graph, g2: Graph):
 
   vertex_x = v1[colour_class][0]
   for vertex_y in v2[colour_class]:
-    num_isomorphisms += count_isomorphism(d + [vertex_x.label], i + [vertex_y.label], g1, g2)
+    num_isomorphisms += count_isomorphism(d + [vertex_x.label], i + [vertex_y.label], g1, g2, use_fast_colour_refinement, is_graph_isomorphism_problem, isom_group)
+    if num_isomorphisms > 0 and is_graph_isomorphism_problem:
+      break
+    if isom_group is not None:
+      if num_isomorphisms > 0 and len(isom_group) > 1:
+        break
     ff1, ss1, vv1 = construct_graph_dictionary(g1)
     ff2, ss2, vv2 = construct_graph_dictionary(g2)
     apply_reversion_of_vertices(v1, vv1)
@@ -70,15 +80,19 @@ def construct_graph_copy(g: Graph) -> Graph:
 
   return new_graph
 
-
-def branching(file):
+# is_graph_isomorphism_problem - True if looking only for a single isomorphism between a pair of graphs
+def do_branching(file, use_fast_colour_refinement: bool, is_graph_isomorphism_problem: bool):
   lst = []
   graphs = load_samples(file)[0]
   graphs_i_dict = {}
 
   for i in range(len(graphs)):
     graphs_i_dict.update({i: graphs[i]})
-  result_tuple = info_construct_result(graphs, True)
+
+  if use_fast_colour_refinement:
+    result_tuple = fast_color_refinement(graphs, True)
+  else:
+    result_tuple = info_construct_result_2(graphs, True)
 
   for group_result in result_tuple:
     used_graphs = []
@@ -90,7 +104,7 @@ def branching(file):
       if len(group_result[0]) == 1: # only singular graph here
         g1 = graphs_i_dict.get(group_result[0][0])
         g2 = construct_graph_copy(g1)
-        automorphisms = individualisation_refinement(g1, g2)
+        automorphisms = individualisation_refinement(g1, g2, use_fast_colour_refinement, is_graph_isomorphism_problem, None)
         if automorphisms > 0:
           tpl = (group_result[0], automorphisms)
           lst.append(tpl)
@@ -98,10 +112,10 @@ def branching(file):
 
         for i in range(len(group_result[0])):
           if group_result[0][i] not in used_graphs:
-            auto_group = []
+            isom_group = []
             n_a = 0
             used_graphs.append(group_result[0][i])
-            auto_group.append(group_result[0][i])
+            isom_group.append(group_result[0][i])
 
             g1 = graphs_i_dict.get(group_result[0][i])
             f1, s1, v1 = construct_graph_dictionary(g1)
@@ -109,7 +123,8 @@ def branching(file):
               if group_result[0][j] not in used_graphs:
                 g2 = graphs_i_dict.get(group_result[0][j])
                 f2, s2, v2 = construct_graph_dictionary(g2)
-                automorphisms = individualisation_refinement(g1, g2)
+                print(f"tuple {i} and {j}")
+                automorphisms = individualisation_refinement(g1, g2, use_fast_colour_refinement, is_graph_isomorphism_problem, isom_group)
 
                 ff1, ss1, vv1 = construct_graph_dictionary(g1)
                 ff2, ss2, vv2 = construct_graph_dictionary(g2)
@@ -117,15 +132,21 @@ def branching(file):
                 apply_reversion_of_vertices(v2, vv2)
 
                 if automorphisms > 0:
-                  auto_group.append(group_result[0][j])
+                  isom_group.append(group_result[0][j])
                   used_graphs.append(group_result[0][j])
-                  if n_a == 0: n_a = automorphisms
-            tpl = (auto_group, n_a)
+                  if n_a == 0:
+                    n_a = automorphisms
+            tpl = (isom_group, n_a)
             #print(tpl)
             lst.append(tpl)
 
   return lst
 
 
-res = branching("SampleGraphSetBranching/modulesD.grl")
-print(res)
+#print("start")
+#start_time = time.time()
+#res = branching("test/basicGI2.grl", False, True)
+#end_time = time.time()
+##print(res)
+#print(end_time - start_time)
+#print(res)
